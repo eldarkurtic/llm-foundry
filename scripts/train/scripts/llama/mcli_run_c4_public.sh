@@ -7,6 +7,7 @@
 
 export EXT_DISK=
 export S3_BUCKET=s3://eldar-mosaic
+export AWS_PROFILE=ista
 
 # export HF_DATASETS_CACHE=/localhome/ekurtic/hf_cache
 # export CUDA_VISIBLE_DEVICES=4,5,6,7
