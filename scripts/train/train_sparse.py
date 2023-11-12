@@ -633,16 +633,20 @@ def main(cfg: DictConfig):
     print('Done.')
 
     print('Saving directly into HF-friendly format')
+    path_prefix = ""
+    if "EXT_DISK" in os.environ:  # redirect somewhere else
+        path_prefix = os.environ["EXT_DISK"]
+
     if "WANDB_PROJECT" in os.environ and os.environ["WANDB_DISABLED"] == "False":
-        path_to_save = os.path.join("output_dir", os.environ["WANDB_PROJECT"], run_name)
+        path_to_save = os.path.join(path_prefix, "output_dir", os.environ["WANDB_PROJECT"], run_name, "hf")
     else:
-        path_to_save = os.path.join("output_dir", run_name)
+        path_to_save = os.path.join(path_prefix, "output_dir", run_name, "hf")
 
     if torch.distributed.get_rank() == 0:
         os.makedirs(path_to_save, exist_ok=True) # <-- override if it exists
         # manually copy over the source code so that we dont depend on HF/transformers nor Mosaic/llmfoundry implementations of the MPT model
-        if os.path.exists(model_config.pretrained_model_name_or_path):
-            import shutil
+        import shutil
+        if os.path.exists(model_config.pretrained_model_name_or_path) and "mpt" in model_config.pretrained_model_name_or_path:
             files_to_copy = [
                 "adapt_tokenizer.py",
                 "attention.py",
@@ -661,10 +665,22 @@ def main(cfg: DictConfig):
                 "tokenizer.json",
                 "tokenizer_config.json",
             ]
-            print(f"[Debugging] Manually copying source code for MPT from {model_config.pretrained_model_name_or_path} to {path_to_save}")
-            for f in files_to_copy:
-                print(f"[Debugging] Copying {f}...")
-                shutil.copyfile(os.path.join(cfg.model_name_or_path, f), os.path.join(path_to_save, f))
+        elif os.path.exists(model_config.pretrained_model_name_or_path) and ("llama" in model_config.pretrained_model_name_or_path or "Llama" in model_config.pretrained_model_name_or_path):
+            files_to_copy = [
+                "config.json",
+                "generation_config.json",
+                "special_tokens_map.json",
+                "tokenizer.json",
+                "tokenizer_config.json",
+                #"tokenizer.model" ????
+            ]
+        else:
+            raise ValueError(f"Unknown pretrained model name or path: {model_config.pretrained_model_name_or_path}")
+
+        print(f"[Debugging] Manually copying source code from {model_config.pretrained_model_name_or_path} to {path_to_save}")
+        for f in files_to_copy:
+            print(f"[Debugging] Copying {f}...")
+            shutil.copyfile(os.path.join(cfg.model_name_or_path, f), os.path.join(path_to_save, f))
 
     torch.distributed.barrier()
     # Save the model in sharded format
