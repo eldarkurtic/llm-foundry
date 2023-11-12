@@ -1,0 +1,118 @@
+model_name_or_path: #TODO
+max_seq_len: #TODO
+precision: amp_bf16
+seed: 42
+
+# knowledge_distillation:
+#   teacher_name_or_path: #TODO
+#   temperature: #TODO
+#   hardness_ce: #TODO
+#   hardness_kldiv: #TODO
+#   hardness_squarehead: #TODO
+
+max_duration: #TODO
+eval_interval: 1ep
+eval_first: true
+global_train_batch_size: #TODO
+device_train_microbatch_size: #TODO
+device_eval_batch_size: ${device_train_microbatch_size}
+run_name: # If left blank, will be read from env var $RUN_NAME
+
+data_remote: #TODO
+data_local: #TODO
+
+# Checkpoint to local filesystem or remote object store
+save_interval: 1ep
+save_num_checkpoints_to_keep: 1
+# save_folder: ./{run_name}/checkpoints
+save_folder: #TODO
+
+# Model
+model:
+  name: hf_causal_lm
+  pretrained: true
+  pretrained_model_name_or_path: ${model_name_or_path}
+  max_seq_len: ${max_seq_len}
+
+# Tokenizer
+tokenizer:
+  name: ${model_name_or_path}
+  kwargs:
+    model_max_length: ${max_seq_len}
+
+# Dataloaders
+train_loader:
+  name: text
+  dataset:
+    remote: ${data_remote}
+    local: ${data_local}
+    split: train_small
+    shuffle: true
+    max_seq_len: ${max_seq_len}
+  drop_last: false
+  num_workers: 8
+  pin_memory: false
+  prefetch_factor: 2
+  persistent_workers: false
+
+eval_loader:
+  name: text
+  dataset:
+    remote: ${data_remote}
+    local: ${data_local}
+    split: val_small
+    shuffle: false
+    max_seq_len: ${max_seq_len}
+  drop_last: false
+  num_workers: 8
+  pin_memory: false
+  prefetch_factor: 2
+  persistent_workers: false
+
+# Optimization
+scheduler:
+  name: linear_decay_with_warmup
+  t_warmup: #TODO
+  alpha_f: 0.0
+
+optimizer:
+  name: decoupled_adamw
+  lr: #TODO
+  betas:
+  - 0.9
+  - 0.999
+  eps: 1.0e-08
+  weight_decay: 0.0
+
+# we can't use gradient clipping for sparse training runs because we don't have
+# a way to mask gradients of pruned weights, and thus the global gradient norm
+# will be incorrect
+# algorithms:
+#   gradient_clipping:
+#     clipping_type: norm
+#     clipping_threshold: 1.0
+
+# FSDP
+fsdp_config:
+  sharding_strategy: FULL_SHARD
+  mixed_precision: FULL
+  activation_checkpointing: true
+  activation_checkpointing_reentrant: false
+  activation_cpu_offload: false
+  limit_all_gathers: true
+  verbose: false
+
+# Logging
+progress_bar: false
+log_to_console: true
+console_log_interval: 1ba
+
+callbacks:
+  speed_monitor:
+    window_size: 10
+  lr_monitor: {}
+  memory_monitor: {}
+  runtime_estimator: {}
+
+loggers:
+  wandb: {}
