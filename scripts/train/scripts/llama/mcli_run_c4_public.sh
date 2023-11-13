@@ -23,11 +23,12 @@ export NUM_EPOCHS=1
 export LR=1e-4
 
 # export MAX_DURATION=${NUM_EPOCHS}ep
-export MAX_DURATION=4ba
-export BS=32
-export PER_DEVICE_BS=1
-export GRAD_ACCUM=1
-export WARMUP=100ba
+export MAX_DURATION=1ep
+export BS=512
+export PER_DEVICE_BS=2
+export GRAD_ACCUM=8
+# 32 GPUs = 512 / (2 * 8)
+export WARMUP=0.05dur
 
 export WANDB_PROJECT=llama2_c4_trainmid30M_sp${SPARSITY}_${NUM_EPOCHS}ep
 export RUN_NAME=CE1.0_sp${SPARSITY}_${MAX_DURATION}_lr${LR}_bs${BS}_noGradClip_warmup${WARMUP}
@@ -43,7 +44,7 @@ composer train_sparse.py \
     global_train_batch_size=${BS} \
     device_train_microbatch_size=${PER_DEVICE_BS} \
     device_train_grad_accum=${GRAD_ACCUM} \
-    eval_first=False \
+    eval_first=True \
     scheduler.t_warmup=${WARMUP} \
     data_remote=${DATA_REMOTE} \
     data_local=${DATA_LOCAL} \
