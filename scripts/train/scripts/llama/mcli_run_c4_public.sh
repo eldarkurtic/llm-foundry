@@ -25,13 +25,13 @@ export LR=1e-4
 # export MAX_DURATION=${NUM_EPOCHS}ep
 export MAX_DURATION=1ep
 export BS=512
-export PER_DEVICE_BS=2
+export PER_DEVICE_BS=4
 export GRAD_ACCUM=8
 # 32 GPUs = 512 / (2 * 8)
 export WARMUP=0.05dur
 
 export WANDB_PROJECT=llama2_c4_trainmid30M_sp${SPARSITY}_${NUM_EPOCHS}ep
-export RUN_NAME=CE1.0_sp${SPARSITY}_${MAX_DURATION}_lr${LR}_bs${BS}_noGradClip_warmup${WARMUP}
+export RUN_NAME=CE1.0_sp${SPARSITY}_${MAX_DURATION}_lr${LR}_bs${BS}_perdevice${PER_DEVICE_BS}_gradAcc${GRAD_ACCUM}_noGradClip_warmup${WARMUP}
 export SAVE_FOLDER=${S3_BUCKET}/output_dir/${WANDB_PROJECT}/${RUN_NAME}
 
 composer train_sparse.py \
