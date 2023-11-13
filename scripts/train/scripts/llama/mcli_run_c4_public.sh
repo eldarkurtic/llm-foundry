@@ -5,6 +5,8 @@
 # 1 epoch on train_mid
 # LR = 1e-4
 
+export CUDA_LAUNCH_BLOCKING=1
+
 export EXT_DISK=
 export S3_BUCKET=s3://eldar-mosaic
 export AWS_PROFILE=ista
