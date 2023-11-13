@@ -48,8 +48,7 @@ composer train_sparse.py \
     scheduler.t_warmup=${WARMUP} \
     data_remote=${DATA_REMOTE} \
     data_local=${DATA_LOCAL} \
-    save_folder=${SAVE_FOLDER} \
-    eval_subset_num_batches=2
+    save_folder=${SAVE_FOLDER}
 
 aws s3 --profile ista sync output_dir/${WANDB_PROJECT}/${RUN_NAME} ${S3_BUCKET}/output_dir/${WANDB_PROJECT}/${RUN_NAME}
 
