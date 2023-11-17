@@ -665,7 +665,7 @@ def main(cfg: DictConfig):
                 "tokenizer.json",
                 "tokenizer_config.json",
             ]
-        elif os.path.exists(model_config.pretrained_model_name_or_path) and ("llama" in model_config.pretrained_model_name_or_path or "Llama" in model_config.pretrained_model_name_or_path):
+        elif os.path.exists(model_config.pretrained_model_name_or_path) and ("llama" in model_config.pretrained_model_name_or_path or "Llama" in model_config.pretrained_model_name_or_path or "Platypus" in model_config.pretrained_model_name_or_path or "platypus" in model_config.pretrained_model_name_or_path or "Mistral" in model_config.pretrained_model_name_or_path or "mistral" in model_config.pretrained_model_name_or_path):
             files_to_copy = [
                 "config.json",
                 "generation_config.json",
@@ -705,4 +705,3 @@ if __name__ == '__main__':
     cfg = om.merge(yaml_cfg, cli_cfg)
     assert isinstance(cfg, DictConfig)
     main(cfg)
-
