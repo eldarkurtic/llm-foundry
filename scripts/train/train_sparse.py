@@ -62,13 +62,14 @@ def kldiv_loss(student_logits, teacher_logits, temperature):
 
 
 class KnowledgeDistillation(Algorithm):
-    def __init__(self, teacher, temperature, hardness_ce, hardness_kldiv, hardness_squarehead):
+    def __init__(self, teacher, temperature, hardness_ce, hardness_kldiv, hardness_squarehead, hardness_cosine_dist):
         self.teacher = teacher
         self.temperature = temperature
         # loss = hardness_ce x CrossEntropyLoss + hardness_kldiv x KLDivLoss + hardness_squarehead x SquareHeadLoss
         self.hardness_ce = hardness_ce
         self.hardness_kldiv = hardness_kldiv
         self.hardness_squarehead = hardness_squarehead
+        self.hardness_cosine_dist = hardness_cosine_dist
         self.first_time = True
 
     def match(self, event, state):
@@ -104,8 +105,8 @@ class KnowledgeDistillation(Algorithm):
             teacher_logits = teacher_outputs.logits[loss_gen_tokens]
 
             kl_loss = self.hardness_kldiv * kldiv_loss(student_logits, teacher_logits, self.temperature)
-            squarehead_loss = torch.tensor(0.0)
 
+            squarehead_loss = torch.tensor(0.0)
             if self.hardness_squarehead > 0:
                 layerwise_losses = []
                 for i in range(1, len(state.outputs.hidden_states)):
@@ -116,15 +117,29 @@ class KnowledgeDistillation(Algorithm):
 
                 squarehead_loss = self.hardness_squarehead * sum(layerwise_losses)
 
+            cosine_dist_loss = torch.tensor(0.0)
+            if self.hardness_cosine_dist > 0:
+                layerwise_losses = []
+                for i in range(1, len(state.outputs.hidden_states)):
+                    useful_tokens = state.batch['attention_mask'] == 1
+                    student_states = state.outputs.hidden_states[i][useful_tokens]
+                    teacher_states = teacher_outputs.hidden_states[i][useful_tokens]
+                    # cosine_distance = 1 - cosine_similarity
+                    all_tokens_losses = 1 - torch.sum(student_states * teacher_states, dim=-1) / (torch.sqrt(torch.sum(student_states * student_states, dim=-1)) * torch.sqrt(torch.sum(teacher_states * teacher_states, dim=-1)))
+                    layerwise_losses.append(all_tokens_losses.mean())
+
+                cosine_dist_loss = self.hardness_cosine_dist * sum(layerwise_losses)
+
             to_log = {
                 "losses/ce": self.hardness_ce * state.loss.item(),
                 "losses/kldiv": kl_loss.item(),
                 "losses/squarehead": squarehead_loss.item(),
+                "losses/cosine_dist": cosine_dist_loss.item(),
             }
             logger.log_metrics(to_log)
 
             state.loss *= self.hardness_ce
-            state.loss += kl_loss + squarehead_loss
+            state.loss += kl_loss + squarehead_loss + cosine_dist_loss
 
 
 def validate_config(cfg: DictConfig):
@@ -554,7 +569,7 @@ def main(cfg: DictConfig):
         algorithms.append(MaskPrunedWeights())
 
     if "knowledge_distillation" in cfg and cfg.knowledge_distillation.teacher_name_or_path is not None:
-        algorithms.append(KnowledgeDistillation(teacher, cfg.knowledge_distillation.temperature, cfg.knowledge_distillation.hardness_ce, cfg.knowledge_distillation.hardness_kldiv, cfg.knowledge_distillation.hardness_squarehead))
+        algorithms.append(KnowledgeDistillation(teacher, cfg.knowledge_distillation.temperature, cfg.knowledge_distillation.hardness_ce, cfg.knowledge_distillation.hardness_kldiv, cfg.knowledge_distillation.hardness_squarehead, cfg.knowledge_distillation.hardness_cosine_dist))
 
     # Dataloaders
     print('Building train loader...')
